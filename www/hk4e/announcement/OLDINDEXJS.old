@@ -1,0 +1,78 @@
+module.exports = {
+    execute(req, res){
+        var ret = {
+            "retcode": 0,
+            "message": "OK",
+            "data": {
+              "list": [
+                {
+                  "list": [
+                    {
+                      "ann_id": 2700,
+                      "title": "CrepePS 2.3",
+                      "subtitle": "Version 2.3 New Content Overview",
+                      "banner": "",
+                      "content": "",
+                      "type_label": "Game",
+                      "tag_label": "11",
+                      "tag_icon": "https://cdn.discordapp.com/attachments/694181397983789056/909523569158029322/unknown.png",
+                      "login_alert": 1,
+                      "lang": "en-us",
+                      "start_time": "2021-11-23 18:00:00",
+                      "end_time": "2022-12-14 17:59:59",
+                      "type": 2,
+                      "remind": 1,
+                      "alert": 0,
+                      "tag_start_time": "2000-01-02 02:04:05",
+                      "tag_end_time": "2030-01-02 15:04:05",
+                      "remind_ver": 1,
+                      "has_content": true
+                    },
+                    {
+                      "ann_id": 2639,
+                      "title": "\"Shadows Amidst Snowstorms\" Version 2.3 Update Details",
+                      "subtitle": "Version 2.3 Update Details",
+                      "banner": "https://uploadstatic-sea.mihoyo.com/announcement/2021/11/22/f70a2d4a67eb117a855707c851571e01_4637995692885518822.jpg",
+                      "content": "",
+                      "type_label": "Game",
+                      "tag_label": "11",
+                      "tag_icon": "https://uploadstatic-sea.mihoyo.com/announcement/2020/03/05/a2588f1a51faee9fa8dfe9aead649dd6_7237021399135895303.png",
+                      "login_alert": 1,
+                      "lang": "en-us",
+                      "start_time": "2021-11-23 18:00:00",
+                      "end_time": "2022-01-04 17:00:00",
+                      "type": 2,
+                      "remind": 1,
+                      "alert": 0,
+                      "tag_start_time": "2000-01-02 02:04:05",
+                      "tag_end_time": "2030-01-02 02:04:05",
+                      "remind_ver": 1,
+                      "has_content": true
+                    }
+                  ],
+                  "type_id": 1,
+                  "type_label": "Event"
+                }
+              ],
+              "total": 16,
+              "type_list": [
+                {
+                  "id": 2,
+                  "name": "游戏系统公告",
+                  "mi18n_name": "Game"
+                },
+                {
+                  "id": 1,
+                  "name": "活动公告",
+                  "mi18n_name": "Event"
+                }
+              ],
+              "alert": false,
+              "alert_id": 0,
+              "timezone": -5,
+              "t": "1638269104"
+            }
+          }
+        res.end(JSON.stringify(ret));
+    }
+}

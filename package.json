@@ -1,0 +1,25 @@
+{
+  "name": "iridium",
+  "version": "1.0.0",
+  "description": "Genshin packet sniffer + visualizer in 1",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memetrollsXD/Iridium.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/memetrollsXD/Iridium/issues"
+  },
+  "homepage": "https://github.com/memetrollsXD/Iridium#readme",
+  "dependencies": {
+    "node-kcp": "^1.0.12",
+    "protobufjs": "^6.11.2",
+    "sqlite3": "^4.2.0",
+    "udp-proxy": "^1.2.0"
+  }
+}

@@ -102,3 +102,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Bring your own packet IDS
+backend/packetIds.json
