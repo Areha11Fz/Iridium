@@ -14,5 +14,8 @@ global.queryPackets = [];
 
 const http_genshin = require('./backend/http_genshin');
 const webSocket = require('./webSocket');
+const interface = require('./interface');
 
 webSocket.execute();
+http_genshin.execute();
+interface.execute();
