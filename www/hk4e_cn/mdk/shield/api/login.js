@@ -7,7 +7,7 @@ module.exports = {
                 "account": {
                     "uid": "420",
                     "name": "",
-                    "email": "Iridium",
+                    "email": "If you see this, you've messed up. Start sniffer after login",
                     "mobile": "",
                     "is_email_verify": "0",
                     "realname": "",

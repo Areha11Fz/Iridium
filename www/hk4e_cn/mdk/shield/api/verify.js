@@ -8,7 +8,7 @@ module.exports = {
                 "account": {
                     "uid": "420",
                     "name": "",
-                    "email": "CrepePS v2.3",
+                    "email": "If you see this, you've messed up. Start sniffer after login",
                     "mobile": "",
                     "is_email_verify": "0",
                     "realname": "",
