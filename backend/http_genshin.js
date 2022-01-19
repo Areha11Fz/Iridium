@@ -19,7 +19,6 @@ let requestListener = function (req, res) {
     try {
         res.writeHead(200, { "Content-Type": "text/html" });
         const file = require(path.resolve(__dirname, "../www/") + req.url.split("?")[0]);
-        log('aaaa')
         file.execute(req, res);
         if (req.url != "/perf/dataUpload") {
             log("200 OK " + req.url);
