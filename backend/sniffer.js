@@ -4,6 +4,7 @@ const dataUtil = require("./dataUtil");
 const kcp = require("node-kcp");
 const fs = require("fs");
 const sqlite3 = require('sqlite3').verbose();
+const { WSMessage } = require("./util/classes");
 
 const log = (event, data) => console.log(`${new Date()} \t ${event} \t ${data}`);
 
@@ -114,6 +115,11 @@ async function doTheWholeThing(name, data, rinfo) {
                                 fs.writeFileSync(`./bins/${dataUtil.getProtoNameByPacketID(packetID)}${(num > 0 ? num : "")}.json`, JSON.stringify(data), (err) => {
                                     // log(err)
                                 });
+                                toWS = {
+                                    protoname: dataUtil.getProtoNameByPacketID(packetID),
+                                    data: JSON.stringify(data),
+                                }
+                                global.queryPackets.push(new WSMessage('evt_new_packet', Buffer.from(toWS).toString('base64')));
                             } catch (e) {
                                 log("ERROR", e);
                             }

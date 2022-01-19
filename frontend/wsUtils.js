@@ -10,7 +10,7 @@ ws.onopen = function () {
 
 // event emmited when receiving message 
 ws.onmessage = function (ev) {
-    console.log(ev);
+    evtHandler(ev);
 }
 
 class WSMessage {

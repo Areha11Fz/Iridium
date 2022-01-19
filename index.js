@@ -10,8 +10,8 @@ For more clarification:
 3. Open UDP Server + Fiddler
 4. Profit
 */
+global.queryPackets = [];
 
-const sniffer = require('./backend/sniffer');
 const http_genshin = require('./backend/http_genshin');
 const webSocket = require('./webSocket');
 

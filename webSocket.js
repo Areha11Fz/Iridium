@@ -18,6 +18,15 @@ function webSocket() {
                 console.log(e);
             }
         })
+        setInterval(() => {
+            // check if there are children in global.queryPackets
+            if (global.queryPackets.length > 0) {
+                global.queryPackets.forEach(child => {
+                    ws.send(child.parse());
+                });
+                global.queryPackets = [];
+            }
+        }, 500);
     })
 }
 module.exports = { execute: webSocket }
