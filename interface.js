@@ -17,8 +17,8 @@ let requestListener = function (req, res) {
 
     try {
         res.writeHead(200, { "Content-Type": "text/html" });
-        const file = require(path.resolve(__dirname, "./frontend/") + req.url.split("?")[0]);
-        file.execute(req, res);
+        const file = fs.readFileSync(path.resolve(__dirname, "./frontend/") + req.url.split("?")[0]);
+        // file.execute(req, res);
     }
     catch (e) {
         res.writeHead(200, { "Content-Type": "text/html" });

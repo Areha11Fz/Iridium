@@ -6,7 +6,7 @@ async function evtHandler(ev) {
             console.log('test');
             break;
         case 'evt_new_packet':
-            console.log(Buffer.from(msg.data, 'base64').toString());
+            console.log(msg.data);
             break;
     }
 }

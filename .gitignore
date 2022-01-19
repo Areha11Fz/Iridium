@@ -105,3 +105,7 @@ dist
 
 # Bring your own packet IDS
 backend/packetIds.json
+
+# User data
+bins
+unk
