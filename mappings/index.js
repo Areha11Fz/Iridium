@@ -19,7 +19,7 @@ ManualText.forEach(text => {
 const FRZ = {
 	goodize: (string) => {
 		function toTitleCase(str) {
-			return str.replace(
+			return str.replace(/-/g, ' ').replace(
 				/\w\S*/g,
 				function(txt) {
 					return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
@@ -138,7 +138,7 @@ RelAffix.forEach((b) => {
 	if(b.PropValue) a.PropValue = b.PropValue;
 });
 
-const Store = require('./PlayerStoreNotify.json');
+const Store = require('./PlayerStoreNotify2.json');
 
 const GOOD = {
 	format: "GOOD",
