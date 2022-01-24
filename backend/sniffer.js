@@ -14,7 +14,9 @@ const ipPacket = require('ip-packet')
 const {
 	WSMessage
 } = require("../util/classes");
-const log = (event, data) => console.log(`${new Date()} \t ${event} \t ${data}`);
+const logger = require('node-color-log');
+logger.setDate(() => (new Date()).toLocaleTimeString())
+logger.setLevelNoColor();
 let Session = {
 	//filename
 	//proxy
@@ -28,6 +30,7 @@ const DIR_CLIENT = 1;
 const GCAP_DELIM = '█▄█\n';
 const GCAP_DIR = './data'
 const PACKET_GetPlayerTokenRsp = dataUtil.getPacketIDByProtoName('GetPlayerTokenRsp');
+const PACKET_UnionCmdNotify = dataUtil.getPacketIDByProtoName('UnionCmdNotify');
 
 let packetQueueSize = 0;
 let unknownPackets = 0,
@@ -45,7 +48,7 @@ async function processMHYPacket(packet) {
 		ip
 	} = packet;
 	if (uncrypt) return uncrypt;
-	if (!crypt) return log('WARNING', "Empty data received.");
+	if (!crypt) return logger.warn('WARNING', "Empty data received.");
 	let KCPContextMap;
 	let packetSource = (ip.port == 22101 || ip.port == 22102) ? DIR_SERVER : DIR_CLIENT;
 	if (packetSource == DIR_SERVER) {
@@ -57,14 +60,16 @@ async function processMHYPacket(packet) {
 	if (crypt.byteLength <= 20) {
 		switch (crypt.readInt32BE(0)) {
 			case 0xFF:
-				log("Handshake", "Connected");
+				logger.info("Handshake", "Connected");
 				break;
 			case 404:
-				log("Handshake", "Disconnected"); //red
+				logger.info("Handshake", "Disconnected"); //red
 				yuankey = undefined
+				serverBound = {};
+				clientBound = {};
 				break;
 			default:
-				log("UNKNOWN HANDSHAKE", crypt.readInt32BE(0));
+				logger.warn("UNKNOWN HANDSHAKE", crypt.readInt32BE(0));
 				break;
 		}
 		return;
@@ -73,36 +78,68 @@ async function processMHYPacket(packet) {
 	let peerID = ip.address + '_' + ip.port + '_' + crypt.readUInt32LE(0).toString(16);
 	if (!KCPContextMap[peerID]) {
 		KCPContextMap[peerID] = new kcp.KCP(crypt.readUInt32LE(0), ip);
-		log('KCP', 'Instance created: ' + peerID)
+		// KCPContextMap[peerID].nodelay(1, 1000, 2, 0)
+		logger.info('KCP', 'Instance created: ' + peerID)
 	}
 
 	let kcpobj = KCPContextMap[peerID];
 	kcpobj.input(await dataUtil.reformatKcpPacket(crypt))
-	kcpobj.update(Date.now())
+	var hrTime = process.hrtime();
+	kcpobj.update(hrTime[0] * 1000000 + hrTime[1] / 1000)
+	kcpobj.flush();
+	let packets = [];
+	let recv;
+	do {
+		recv = kcpobj.recv();
+		if(!recv) break;
+		let keyBuffer = yuankey || initialKey;
 
-	let recv = kcpobj.recv();
+		dataUtil.xorData(recv, keyBuffer);
 
-	if (!recv) return; //log('KCP', 'Recv is empty.'); //red
+		let packetID = recv.readUInt16BE(2);
+		if (packetID == PACKET_GetPlayerTokenRsp) {
+			var proto = await dataUtil.dataToProtobuffer(dataUtil.removeMagic(recv), "GetPlayerTokenRsp")
+			const {
+				stdout,
+				stderr
+			} = await execFile('./yuanshenKey/ConsoleApp2.exe', [proto.secretKeySeed]);
+			logger.debug(proto.secretKeySeed.toString())
+			yuankey = Buffer.from(stdout.toString(), 'hex');
+		}
+		packets.push(recv);
+		
+	} while(recv);
+	hrTime = process.hrtime();
+	kcpobj.update(hrTime[0] * 1000000 + hrTime[1] / 1000)
+	return packets;
+}
 
-	let keyBuffer = yuankey || initialKey;
+function getInfoCharacter(packetName) {
+	if(!isNaN(+packetName)) return ' X ';
+	if(packetName.includes('Rsp')) return '<--';
+	if(packetName.includes('Req')) return '-->';
+	if(packetName.includes('Notify')) return '(i)';
+}
 
-	if (!keyBuffer) return log('KCP', 'NO KEY PROVIDED.'); //red
-
-	dataUtil.xorData(recv, keyBuffer);
-
-	let packetID = recv.readUInt16BE(2);
-	if (packetID == PACKET_GetPlayerTokenRsp) {
-		var proto = await dataUtil.dataToProtobuffer(dataUtil.removeMagic(recv), "GetPlayerTokenRsp")
-		const {
-			stdout,
-			stderr
-		} = await execFile('./yuanshenKey/ConsoleApp2.exe', [proto.secretKeySeed]);
-		log("DEBUG", proto.secretKeySeed.toString())
-		yuankey = Buffer.from(stdout.toString(), 'hex');
-		return recv;
-	}
-
-	return recv;
+function logPacket(packetSource, packetID, protoName, o, union, last) {
+	if(union)
+		if(last)
+			logger.log('      └─').joint();
+		else
+			logger.log('      ├─').joint();
+	if(packetSource)
+		logger.color('white').log(union?'':new Date().toLocaleTimeString()).joint()
+		.color('cyan').log(' [CLIENT] ').joint()
+		.color('white').log(`${packetID}\t${getInfoCharacter(protoName)}\t${protoName}   \t`).joint()
+		.dim().log((JSON.stringify(o.object) || '').substr(0, process.stdout.columns - 73)).joint()
+		.log("\x1b[0m").joint().log("\x1b[0m")
+	else
+		logger.color('white').log(union?'':new Date().toLocaleTimeString()).joint()
+		.color('yellow').log(' [SERVER] ').joint()
+		.color('white').log(`${packetID}\t${getInfoCharacter(protoName)}\t${protoName}   \t`).joint()
+		.dim().log((JSON.stringify(o.object) || '').substr(0, process.stdout.columns - 73)).joint()
+		.log("\x1b[0m").joint().log("\x1b[0m")
+	if(last) logger.log();
 }
 
 async function decodePacketProto(packet, ip) {
@@ -112,7 +149,7 @@ async function decodePacketProto(packet, ip) {
 		"QueryPathReq",
 		"PingReq",
 		"PingRsp",
-		"UnionCmdNotify",
+		// "UnionCmdNotify",
 		"EvtAiSyncCombatThreatInfoNotify",
 		"WorldPlayerRTTNotify",
 		"QueryPathRsp",
@@ -142,29 +179,47 @@ async function decodePacketProto(packet, ip) {
 	]
 	if (ignoredPackets.includes(protoName)) return;
 
-	let packetSource = (ip.port == 22101 || ip.port == 22102) ? DIR_SERVER : DIR_CLIENT;
-	let name = ['SERVER', 'CLIENT'][packetSource];
-	log(`[${name}]`, `Sent packet ${packetID} ${protoName}`);
+	let o = {};
 	if (packetID != parseInt(protoName)) {
 		let object = await dataUtil.dataToProtobuffer(dataUtil.parsePacketData(packet), packetID);
-		return {
+		o = {
 			packetID,
 			protoName,
 			object: object,
 		}
 	}
 	if (packetID == protoName) {
-		return {
+		o = {
 			packetID,
-			protoName
+			protoName,
+			object: packet
 		}
 	}
+	let packetSource = (ip.port == 22101 || ip.port == 22102) ? DIR_SERVER : DIR_CLIENT;
+	logPacket(packetSource, packetID, protoName, o);
+
+	if (packetID == PACKET_UnionCmdNotify) {
+		var commands = [];
+		for (var i = 0; i < o.object.cmdList.length; i++) {
+			let {messageId, body} = o.object.cmdList[i];
+			let protoName = dataUtil.getProtoNameByPacketID(messageId);
+			commands.push({
+				protoName,
+				packetID: messageId,
+				object: await dataUtil.dataToProtobuffer(body, messageId)
+			})
+			logPacket(packetSource, messageId, protoName, commands[commands.length-1], true, i == o.object.cmdList.length - 1);
+		}
+		o.object.cmdList = commands;
+	}
+	return o;
 }
 
 function joinBuffers(buffers, delimiter = ' ') {
   let d = Buffer.from(delimiter);
   return buffers.reduce((prev, b) => Buffer.concat([prev, d, b]));
 }
+function delay(t){return new Promise(resolve => setTimeout(resolve, t))};
 
 module.exports = {
 	async execute() {
@@ -180,23 +235,26 @@ module.exports = {
 					packet.ip.port !== 22102 &&
 					packet.ip.port_dst !== 22101 &&
 					packet.ip.port_dst !== 22102) continue;
-
-				decryptedDatagram = await processMHYPacket(packet);
-				if (!decryptedDatagram) continue;
-				// console.log(decryptedDatagram);
-				if (Session.datagrams) {
-					let datagram;
-					if(packet.ip.port === 22101 || packet.ip.port === 22102) {
-						datagram = Buffer.concat([Buffer.from([0]), decryptedDatagram])
-					}else{
-						datagram = Buffer.concat([Buffer.from([1]), decryptedDatagram])
-					}
-					Session.datagrams.push(datagram);
-				};
-				packetObject = await decodePacketProto(decryptedDatagram, packet.ip);
-				// console.log(JSON.stringify(packetObject));
-				if (packetObject)
-					global.queryPackets.push(new WSMessage('evt_new_packet', JSON.stringify(packetObject).toString('base64')));
+				await delay(1)
+				packets = await processMHYPacket(packet);
+				if (!packets) continue;
+				for (var i = 0; i < packets.length; i++) {
+					let decryptedDatagram = packets[i];
+					// logger.log(packet.crypt.slice(0,40).toString('hex'));
+					if (Session.datagrams) {
+						let datagram;
+						if(packet.ip.port === 22101 || packet.ip.port === 22102) {
+							datagram = Buffer.concat([Buffer.from([0]), decryptedDatagram])
+						}else{
+							datagram = Buffer.concat([Buffer.from([1]), decryptedDatagram])
+						}
+						Session.datagrams.push(datagram);
+					};
+					packetObject = await decodePacketProto(decryptedDatagram, packet.ip);
+					// console.logger.log(JSON.stringify(packetObject));
+					if (packetObject)
+						global.queryPackets.push(new WSMessage('evt_new_packet', JSON.stringify(packetObject).toString('base64')));
+				}
 			}
 			if (Session.fileHandle && Session.datagrams && Session.datagrams.length > 0) {
 				await Session.fileHandle.appendFile(Buffer.concat([joinBuffers(Session.datagrams, GCAP_DELIM), Buffer.from(GCAP_DELIM)]))
@@ -227,7 +285,7 @@ module.exports = {
 		});
 
 		parser.on('end', async () => {
-			console.log('Parse finished.')
+			logger.info('Parse finished.')
 		});
 	},
 	async gcap(gcapFile) {
@@ -238,12 +296,11 @@ module.exports = {
 		var linestream = new DelimiterStream({
 			delimiter: GCAP_DELIM
 		});
-
 		var input = fs.createReadStream(gcapFile);
 
 		// file = file.split(GCAP_DELIM);
 		linestream.on('data', packet => {
-			// console.log(packet)
+			// console.logger.log(packet)
 			ip = {};
 			if (packet.readInt8(0) == 1) {
 				ip.port_dst = 22101
@@ -275,12 +332,12 @@ module.exports = {
 		Session.proxy = proxy.createServer(opt);
 
 		Session.proxy.on('listening', (details) => {
-			log("UDP", `Proxy Listening @ ${details.target.address}:${details.target.port}`);
+			logger.log("UDP", `Proxy Listening @ ${details.target.address}:${details.target.port}`);
 		});
 
 		Session.proxy.on('bound', (details) => {
-			log('UDP', `Proxy bound to ${details.route.address}:${details.route.port}`);
-			log('UDP', `Peer bound to ${details.peer.address}:${details.peer.port}`);
+			logger.log('UDP', `Proxy bound to ${details.route.address}:${details.route.port}`);
+			logger.log('UDP', `Peer bound to ${details.peer.address}:${details.peer.port}`);
 		});
 
 		// 'message' is emitted when the server gets a message

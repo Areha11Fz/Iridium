@@ -19,6 +19,7 @@
   "dependencies": {
     "delimiter-stream": "^3.0.1",
     "ip-packet": "^1.1.0",
+    "node-color-log": "^7.0.0",
     "node-kcp": "^1.0.12",
     "pcap-parser": "^0.2.1",
     "protobufjs": "^6.11.2",
