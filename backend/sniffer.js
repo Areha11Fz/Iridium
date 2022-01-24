@@ -212,7 +212,7 @@ module.exports = {
 				data: packet.data.slice(28),
 				ip: {
 					address: ip.src_addr,
-					port: udp.port_src
+					port: udp.port_src,
 					port_dst: udp.port_dst
 				}
 			})
