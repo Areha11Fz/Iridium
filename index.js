@@ -23,9 +23,9 @@ const webSocket = require('./webSocket');
 const interface = require('./interface');
 const sniffer = require('./backend/sniffer');
 
-// webSocket.execute();
-// http_genshin.execute();
-// interface.execute();
+webSocket.execute();
+http_genshin.execute();
+interface.execute();
 
 if (!fs.existsSync('unk/unknown_packets')){
     fs.mkdirSync('unk/unknown_packets', { recursive: true });
@@ -34,4 +34,7 @@ if (!fs.existsSync('bins/bin')){
     fs.mkdirSync('bins/bin', { recursive: true });
 }
 
-sniffer.execute(process.argv[2]);
+sniffer.execute();
+if(process.argv[2])
+    sniffer.pcap(process.argv[2]);
+sniffer.UDPProxy();

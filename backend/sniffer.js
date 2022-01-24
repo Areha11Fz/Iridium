@@ -19,16 +19,21 @@ const DIR_CLIENT = 1;
 const PACKET_GetPlayerTokenRsp = dataUtil.getPacketIDByProtoName('GetPlayerTokenRsp');
 
 let packetQueueSize = 0;
-let unknownPackets = 0, packetOrderCount = 0;
+let unknownPackets = 0,
+	packetOrderCount = 0;
 let initialKey, yuankey;
 
 var serverBound = {};
 var clientBound = {};
 
-async function processMHYPacket(data, ip) {
-	if(!data) return log('WARNING', "Empty data received.");
+async function processMHYPacket(packet) {
+	let {
+		data,
+		ip
+	} = packet;
+	if (!data) return log('WARNING', "Empty data received.");
 	let KCPContextMap;
-	let packetSource = (ip.port == 22101 || ip.port == 22102)? DIR_SERVER : DIR_CLIENT;
+	let packetSource = (ip.port == 22101 || ip.port == 22102) ? DIR_SERVER : DIR_CLIENT;
 	if (packetSource == DIR_SERVER) {
 		KCPContextMap = serverBound;
 	} else {
@@ -49,12 +54,12 @@ async function processMHYPacket(data, ip) {
 				break;
 		}
 		return;
-	}	
-	
+	}
+
 	let peerID = ip.address + '_' + ip.port + '_' + data.readUInt32LE(0).toString(16);
-	if(!KCPContextMap[peerID]) {
+	if (!KCPContextMap[peerID]) {
 		KCPContextMap[peerID] = new kcp.KCP(data.readUInt32LE(0), ip);
-		log('KCP', 'Instance created: '+ peerID)
+		log('KCP', 'Instance created: ' + peerID)
 	}
 
 	let kcpobj = KCPContextMap[peerID];
@@ -63,11 +68,11 @@ async function processMHYPacket(data, ip) {
 
 	let recv = kcpobj.recv();
 
-	if(!recv) return; //log('KCP', 'Recv is empty.'); //red
+	if (!recv) return; //log('KCP', 'Recv is empty.'); //red
 
 	let keyBuffer = yuankey || initialKey;
-	
-	if(!keyBuffer) return log('KCP', 'NO KEY PROVIDED.'); //red
+
+	if (!keyBuffer) return log('KCP', 'NO KEY PROVIDED.'); //red
 
 	dataUtil.xorData(recv, keyBuffer);
 
@@ -77,42 +82,42 @@ async function processMHYPacket(data, ip) {
 	// 	return log('KCP', 'The packet signature is invalid.');//red
 
 	let packetID = recv.readUInt16BE(2);
-    let protoName = dataUtil.getProtoNameByPacketID(packetID);
+	let protoName = dataUtil.getProtoNameByPacketID(packetID);
 	let ignoredPackets = [
-        "QueryPathReq",
-        "PingReq",
-        "PingRsp",
-        "UnionCmdNotify",
-        "EvtAiSyncCombatThreatInfoNotify",
-        "WorldPlayerRTTNotify",
-        "QueryPathRsp",
-        "EvtAiSyncSkillCdNotify",
-        "SetEntityClientDataNotify",
-        "ObstacleModifyNotify",
-        "ClientReportNotify",
-        "ClientAbilityInitFinishNotify",
-        "EntityConfigHashNotify",
-        "MonsterAIConfigHashNotify",
-        "EntityAiSyncNotify",
-        //currently broken packets
-        "TakeAchievementRewardRsp",
-        "ActivityPlayOpenAnimNotify",
-        "FurnitureCurModuleArrangeCountNotify",
-        "HomeAvatarTalkFinishInfoNotify",
-        "GroupLinkAllNotify",
-        "UnlockedFurnitureSuiteDataNotify",
-        "HomeAvatarRewardEventNotify",
-        "H5ActivityIdsNotify",
-        "HomePriorCheckNotify",
-        "HomePlantInfoNotify",
-        "HomeResourceNotify",
-        "HomeAvatarAllFinishRewardNotify",
-        "HomeBasicInfoNotify",
-        "FurnitureMakeRsp"
-    ]
-    if(ignoredPackets.includes(protoName)) return;
-	
-	let name = ['SERVER','CLIENT'][packetSource];
+		"QueryPathReq",
+		"PingReq",
+		"PingRsp",
+		"UnionCmdNotify",
+		"EvtAiSyncCombatThreatInfoNotify",
+		"WorldPlayerRTTNotify",
+		"QueryPathRsp",
+		"EvtAiSyncSkillCdNotify",
+		"SetEntityClientDataNotify",
+		"ObstacleModifyNotify",
+		"ClientReportNotify",
+		"ClientAbilityInitFinishNotify",
+		"EntityConfigHashNotify",
+		"MonsterAIConfigHashNotify",
+		"EntityAiSyncNotify",
+		//currently broken packets
+		"TakeAchievementRewardRsp",
+		"ActivityPlayOpenAnimNotify",
+		"FurnitureCurModuleArrangeCountNotify",
+		"HomeAvatarTalkFinishInfoNotify",
+		"GroupLinkAllNotify",
+		"UnlockedFurnitureSuiteDataNotify",
+		"HomeAvatarRewardEventNotify",
+		"H5ActivityIdsNotify",
+		"HomePriorCheckNotify",
+		"HomePlantInfoNotify",
+		"HomeResourceNotify",
+		"HomeAvatarAllFinishRewardNotify",
+		"HomeBasicInfoNotify",
+		"FurnitureMakeRsp"
+	]
+	if (ignoredPackets.includes(protoName)) return;
+
+	let name = ['SERVER', 'CLIENT'][packetSource];
 	log(`[${name}]`, `Sent packet ${packetID} ${protoName}`);
 	//log(await dataUtil.dataToProtobuffer(dataUtil.parsePacketData(recv), packetID));
 	if (packetID == +protoName) {
@@ -126,7 +131,10 @@ async function processMHYPacket(data, ip) {
 
 	if (packetID == PACKET_GetPlayerTokenRsp) {
 		var proto = await dataUtil.dataToProtobuffer(dataUtil.removeMagic(recv), "GetPlayerTokenRsp")
-		const {stdout, stderr} = await execFile('./yuanshenKey/ConsoleApp2.exe', [proto.secretKeySeed]);
+		const {
+			stdout,
+			stderr
+		} = await execFile('./yuanshenKey/ConsoleApp2.exe', [proto.secretKeySeed]);
 		log("DEBUG", proto.secretKeySeed.toString())
 		yuankey = Buffer.from(stdout.toString(), 'hex');
 		return;
@@ -174,65 +182,79 @@ async function processMHYPacket(data, ip) {
 }
 
 module.exports = {
-	async execute(pcapFile) {
-		// let row = await keysDB.get('SELECT * FROM keys WHERE first_bytes=51544');
-		initialKey = Buffer.from(require('./key.json'),'base64');
-		// console.log(initialKey)
-		var parser = pcapp.parse(pcapFile);
-		parser.on('packet', function(packet) {
-			packetQueue.push(packet)
-			packetQueueSize++;
-		});
+	async execute() {
+		initialKey = Buffer.from(require('./key.json'), 'base64');
+
 		setInterval(async () => {
-			if(!packetQueueSize) return;
-			while(packetQueue.length) {
+			if (!packetQueueSize) return;
+			while (packetQueue.length) {
 				let packet = packetQueue.shift();
 				packetQueueSize--;
-				if(packet.data.readInt16LE(12) === 8)
-					packet.data = packet.data.slice(14);
-				let udp = dataUtil.read_pcap_udp_header(packet.data);
-				let ip = dataUtil.read_pcap_ipv4_header(packet.data);
-				if(udp.port_src !== 22101
-				&& udp.port_src !== 22102
-				&& udp.port_dst !== 22101
-				&& udp.port_dst !== 22102) continue;
-				// console.log(read);
-				await processMHYPacket(packet.data.slice(28), {
-					address: ip.src_addr,
-					port: udp.port_src
-				});
+
+				if (packet.ip.port !== 22101 &&
+					packet.ip.port !== 22102) continue;
+
+				await processMHYPacket(packet);
 			}
 		}, 100)
-		
+	},
+	async pcap(pcapFile) {
+		var parser = pcapp.parse(pcapFile);
+		parser.on('packet', packet => {
+			if (packet.data.readInt16LE(12) === 8)
+				packet.data = packet.data.slice(14);
+			let udp = dataUtil.read_pcap_udp_header(packet.data);
+			let ip = dataUtil.read_pcap_ipv4_header(packet.data);
+
+			packetQueue.push({
+				data: packet.data.slice(28),
+				ip: {
+					address: ip.src_addr,
+					port: udp.port_src
+				}
+			})
+			packetQueueSize++;
+		});
+
 		parser.on('end', async () => {
 			console.log('Parse finished.')
 		});
-		// var options = {
-		//     address: '47.90.134.247', // America: 47.90.134.247, Europe: 47.245.143.151
-		//     port: port,
-		//     localaddress: '127.0.0.1',
-		//     localport: port,
-		// };
+	},
+	async UDPProxy() {
+		var options = {
+			address: '47.90.134.247', // America: 47.90.134.247, Europe: 47.245.143.151
+			port: 22101,
+			localaddress: '127.0.0.1',
+			localport: 22101,
+		};
 
-		// var server = proxy.createServer(options);
+		var server = proxy.createServer(options);
 
-		// server.on('listening', function (details) {
-		//     log("UDP", `Proxy Listening @ " + ${details.target.address}:${details.target.port}`);
-		// });
+		server.on('listening', function(details) {
+			log("UDP", `Proxy Listening @ ${details.target.address}:${details.target.port}`);
+		});
 
-		// server.on('bound', function (details) {
-		//     log('UDP', `Proxy bound to ${details.route.address}:${details.route.port}`);
-		//     log('UDP', `Peer bound to ${details.peer.address}:${details.peer.port}`);
-		// });
+		server.on('bound', function(details) {
+			log('UDP', `Proxy bound to ${details.route.address}:${details.route.port}`);
+			log('UDP', `Peer bound to ${details.peer.address}:${details.peer.port}`);
+		});
 
-		// // 'message' is emitted when the server gets a message
-		// server.on('message', async function (message, sender) {
-		//     processMHYPacket("CLIENT", message, sender);
-		// });
+		// 'message' is emitted when the server gets a message
+		server.on('message', async function(packet, sender) {
+			packetQueue.push({
+				data: packet,
+				ip: sender
+			})
+			packetQueueSize++;
+		});
 
-		// // 'proxyMsg' is emitted when the bound socket gets a message and it's send back to the peer the socket was bound to
-		// server.on('proxyMsg', async function (message, sender, peer) {
-		//     processMHYPacket("SERVER", message, sender);
-		// });
+		// 'proxyMsg' is emitted when the bound socket gets a message and it's send back to the peer the socket was bound to
+		server.on('proxyMsg', async function(packet, sender, peer) {
+			packetQueue.push({
+				data: packet,
+				ip: sender
+			})
+			packetQueueSize++;
+		});
 	}
 }
