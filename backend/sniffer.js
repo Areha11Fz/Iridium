@@ -12,7 +12,7 @@ const {
 } = require("../util/classes");
 const log = (event, data) => console.log(`${new Date()} \t ${event} \t ${data}`);
 
-const keysDB = new SQLiteCrud('./keys.db');
+// const keysDB = new SQLiteCrud('./keys.db');
 const packetQueue = [];
 const DIR_SERVER = 0;
 const DIR_CLIENT = 1;
@@ -175,9 +175,9 @@ async function processMHYPacket(data, ip) {
 
 module.exports = {
 	async execute(pcapFile) {
-		let row = await keysDB.get('SELECT * FROM keys WHERE first_bytes=51544');
-		initialKey = Buffer.from(row.key_buffer);
-
+		// let row = await keysDB.get('SELECT * FROM keys WHERE first_bytes=51544');
+		initialKey = Buffer.from(require('./key.json'),'base64');
+		// console.log(initialKey)
 		var parser = pcapp.parse(pcapFile);
 		parser.on('packet', function(packet) {
 			packetQueue.push(packet)
@@ -202,7 +202,7 @@ module.exports = {
 					port: udp.port_src
 				});
 			}
-		}, 200)
+		}, 100)
 		
 		parser.on('end', async () => {
 			console.log('Parse finished.')
