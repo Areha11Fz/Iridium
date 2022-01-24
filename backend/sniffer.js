@@ -191,8 +191,10 @@ module.exports = {
 				let packet = packetQueue.shift();
 				packetQueueSize--;
 
-				if (packet.ip.port !== 22101 &&
-					packet.ip.port !== 22102) continue;
+				if (packet.ip.port !== 22101
+				&&	packet.ip.port !== 22102
+				&&	packet.ip.port_dst !== 22101
+				&&	packet.ip.port_dst !== 22102) continue;
 
 				await processMHYPacket(packet);
 			}
@@ -211,6 +213,7 @@ module.exports = {
 				ip: {
 					address: ip.src_addr,
 					port: udp.port_src
+					port_dst: udp.port_dst
 				}
 			})
 			packetQueueSize++;
