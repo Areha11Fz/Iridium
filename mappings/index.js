@@ -138,50 +138,52 @@ RelAffix.forEach((b) => {
 	if(b.PropValue) a.PropValue = b.PropValue;
 });
 
-const Store = require('./PlayerStoreNotify2.json');
-
-const GOOD = {
-	format: "GOOD",
-	version: 1,
-	source: "Iridium",
-}
-GOOD.artifacts = Store.itemList.map(item => {
-	let reference = G.Items[item.itemId];
-	if(!reference) {
-		item.NOTFOUND = true;
-		return;
-	}
-	item.Name = reference.Name;
-	let g = {};
-	if(item.equip && item.equip.reliquary) {
-		g.setKey = FRZ.goodize(G.EqAffix[G.RelSet[reference.SetId].EquipAffixId].Name)
-		g.slotKey = FRZ.rels[reference.EquipType]
-		g.level = item.equip.reliquary.level - 1;
-		g.rarity = FRZ.rarities[reference.MaxLevel];
-		if(g.rarity < 5) return;
-		g.mainStatKey = FRZ.stats[G.RelMP[item.equip.reliquary.mainPropId].PropType];
-		g.lock = item.equip.isLocked;
-		if(item.equip.reliquary.appendPropIdList) {
-			let substats = new Map();
-			item.equip.reliquary.appendPropIdList.forEach(prop => {
-				let key = FRZ.stats[G.RelAffix[prop].PropType];
-				if(substats.has(key))
-					substats.set(key, substats.get(key) + G.RelAffix[prop].PropValue)
-				else
-					substats.set(key, G.RelAffix[prop].PropValue)
-			})
-			g.substats = Array.from(substats, ([key, value]) => {
-				if(key[key.length - 1] == '_')
-					value = Math.round((value * 100 + Number.EPSILON + 0.0001) * 10) / 10;
-				else
-					value = +Math.round(value).toFixed(1);
-
-				return {key: key, value: value}
-			});
-			console.log(g.substats);
+module.exports = {
+	PlayerStoreNotify(store) {
+		const Store = store;
+		const GOOD = {
+			format: "GOOD",
+			version: 1,
+			source: "Iridium",
 		}
-		return g;
-	}
-}).filter(_=>_)
+		GOOD.artifacts = Store.itemList.map(item => {
+			let reference = G.Items[item.itemId];
+			if(!reference) {
+				item.NOTFOUND = true;
+				return;
+			}
+			item.Name = reference.Name;
+			let g = {};
+			if(item.equip && item.equip.reliquary) {
+				g.setKey = FRZ.goodize(G.EqAffix[G.RelSet[reference.SetId].EquipAffixId].Name)
+				g.slotKey = FRZ.rels[reference.EquipType]
+				g.level = item.equip.reliquary.level - 1;
+				g.rarity = FRZ.rarities[reference.MaxLevel];
+				if(g.rarity < 5) return;
+				g.mainStatKey = FRZ.stats[G.RelMP[item.equip.reliquary.mainPropId].PropType];
+				g.lock = item.equip.isLocked;
+				if(item.equip.reliquary.appendPropIdList) {
+					let substats = new Map();
+					item.equip.reliquary.appendPropIdList.forEach(prop => {
+						let key = FRZ.stats[G.RelAffix[prop].PropType];
+						if(substats.has(key))
+							substats.set(key, substats.get(key) + G.RelAffix[prop].PropValue)
+						else
+							substats.set(key, G.RelAffix[prop].PropValue)
+					})
+					g.substats = Array.from(substats, ([key, value]) => {
+						if(key[key.length - 1] == '_')
+							value = Math.round((value * 100 + Number.EPSILON + 0.0001) * 10) / 10;
+						else
+							value = +Math.round(value).toFixed(1);
 
-fs.writeFileSync('Gooded.json', JSON.stringify(GOOD, undefined, '\t'));
+						return {key: key, value: value}
+					});
+					console.log(g.substats);
+				}
+				return g;
+			}
+		}).filter(_=>_)
+		return GOOD;
+	}
+}

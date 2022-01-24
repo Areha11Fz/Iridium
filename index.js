@@ -12,9 +12,6 @@ For more clarification:
 */
 
 const fs = require('fs');
- dir = './tmp/but/then/nested';
-
-
 
 global.queryPackets = [];
 
@@ -35,6 +32,15 @@ if (!fs.existsSync('bins/bin')){
 }
 
 sniffer.execute();
-if(process.argv[2])
-    sniffer.pcap(process.argv[2]);
-sniffer.UDPProxy();
+if(process.argv[2]) {
+    let ext = process.argv[2].split('.')[1];
+    sniffer[ext](process.argv[2]);
+}else{
+    sniffer.startProxySession();
+}
+
+process.on('SIGINT', function() {
+    console.log("Caught interrupt signal");
+    sniffer.stopProxySession();
+    process.exit();
+});

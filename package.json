@@ -17,9 +17,14 @@
   },
   "homepage": "https://github.com/memetrollsXD/Iridium#readme",
   "dependencies": {
+    "delimiter-stream": "^3.0.1",
+    "ip-packet": "^1.1.0",
     "node-kcp": "^1.0.12",
+    "pcap-parser": "^0.2.1",
     "protobufjs": "^6.11.2",
     "sqlite3": "^4.2.0",
+    "sqlite3-promisify": "^1.0.3",
+    "udp-packet": "^2.0.0",
     "udp-proxy": "^1.2.0",
     "ws": "^8.4.2"
   }
