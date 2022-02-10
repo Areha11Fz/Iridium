@@ -52,6 +52,8 @@ let yuankey;
 var serverBound = {};
 var clientBound = {};
 
+var orderCount = 0;
+
 async function processMHYPacket(packet) {
 	let {
 		crypt,
@@ -217,6 +219,39 @@ async function decodePacketProto(packet, ip) {
 		o.object.cmdList = commands;
 	}
 	if (o) o.source = packetSource;
+
+	var packetSourceName;
+
+	if (packetSource == 0) {
+		packetSourceName = '[SERVER]'
+	} else {
+		packetSourceName = '[CLIENT]'
+	}
+
+	var count = 0;
+	var isExist = true;
+	while (isExist) {
+		try {
+			isExist = fs.statSync("./json_output/" + protoName + (count > 0 ? count : "") + ".json");
+			count++;
+		} catch {
+			isExist = false;
+		}
+	}
+
+	if (!isExist) {
+		if (count == 0) {
+			fs.writeFileSync("./json_output/" + protoName + ".json", JSON.stringify(o.object));
+		} else {
+			fs.writeFileSync("./json_output/" + protoName + count + ".json", JSON.stringify(o.object));
+		}
+	}
+
+	orderCount++;
+	fs.appendFile("./output_packet_order/" + orderCount + "_" + protoName + "_" + packetID + "_" + packetSourceName + ".json", JSON.stringify(o.object), (err) => {
+		// console.log(err)
+	});
+
 	return o;
 }
 
@@ -232,8 +267,8 @@ function queuePacket(packet) {
 }
 
 
-var proxyIP = '47.90.134.24';
-var proxyPort = 22101;
+var proxyIP = '8.211.185.185';
+var proxyPort = 22102;
 async function execute() {
 	async function loop() {
 		if (!packetQueueSize) return setImmediate(loop);
@@ -263,7 +298,7 @@ async function execute() {
 					Session.datagrams.push(datagram);
 				};
 				packetObject = await decodePacketProto(decryptedDatagram, packet.ip);
-				// console.log.log(JSON.stringify(packetObject));
+				// console.log(JSON.stringify(packetObject));
 				if (packetObject) {
 					frontend.queuePacket(packetObject);
 				}
