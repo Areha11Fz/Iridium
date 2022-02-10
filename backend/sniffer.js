@@ -112,14 +112,14 @@ async function processMHYPacket(packet) {
 	kcpobj.input(await MHYbuf.reformatKcpPacket(crypt))
 	var hrTime = process.hrtime();
 	kcpobj.update(hrTime[0] * 1000000 + hrTime[1] / 1000);
-	kcpobj.wndsize(1024,1024);
+	kcpobj.wndsize(1024, 1024);
 
 	let packets = [];
 	let recv;
 	do {
 		recv = kcpobj.recv();
-		if(!recv) break;
-		if(!initialKey) {
+		if (!recv) break;
+		if (!initialKey) {
 			initialKey = MHYKeys[recv.readUInt16BE(0) ^ 0x4567];
 		}
 		let keyBuffer = overrideKey || yuankey || initialKey;
@@ -136,42 +136,42 @@ async function processMHYPacket(packet) {
 			generator.int64();
 			let key = Buffer.alloc(4096);
 			for (let i = 0; i < 4096; i += 8) {
-			    let val = generator.int64();
-			    key.writeBigUInt64BE(val, i)
+				let val = generator.int64();
+				key.writeBigUInt64BE(val, i)
 			}
 			yuankey = key;
 		}
 		packets.push(recv);
-		
-	} while(recv);
+
+	} while (recv);
 	hrTime = process.hrtime();
 	kcpobj.update(hrTime[0] * 1000000 + hrTime[1] / 1000)
 	return packets;
 }
 
 function getInfoCharacter(packetName, dir) {
-	if(!isNaN(+packetName)) return ' X ';
-	if(packetName.includes('Rsp')) return chalk.yellow('<--');
-	if(packetName.includes('Req')) return chalk.cyan('-->');
-	if(packetName.includes('Notify') && !dir) return chalk.yellowBright('<-i');
-	if(packetName.includes('Notify') && dir) return chalk.cyanBright('i->');
+	if (!isNaN(+packetName)) return ' X ';
+	if (packetName.includes('Rsp')) return chalk.yellow('<--');
+	if (packetName.includes('Req')) return chalk.cyan('-->');
+	if (packetName.includes('Notify') && !dir) return chalk.yellowBright('<-i');
+	if (packetName.includes('Notify') && dir) return chalk.cyanBright('i->');
 }
 
 function logPacket(packetSource, packetID, protoName, o, union, last) {
 	// return;
 	let s = '';
-	if(union)
-		if(last)
+	if (union)
+		if (last)
 			s += ('      └─');
 		else
 			s += ('      ├─');
-	s += union?'':new Date().toLocaleTimeString();
-	s += packetSource?chalk.cyan(' [CLIENT] '):chalk.yellow(' [SERVER] ');
-	s += `${(''+packetID).padEnd(6)}${getInfoCharacter(protoName,packetSource)}   ${(''+(protoName || '')).padEnd(20)}`;
+	s += union ? '' : new Date().toLocaleTimeString();
+	s += packetSource ? chalk.cyan(' [CLIENT] ') : chalk.yellow(' [SERVER] ');
+	s += `${('' + packetID).padEnd(6)}${getInfoCharacter(protoName, packetSource)}   ${('' + (protoName || '')).padEnd(20)}`;
 	log.plain(s);
 	log.trail(JSON.stringify(o.object) || '');
-	
-	if(last) log.log();
+
+	if (last) log.log();
 }
 
 async function decodePacketProto(packet, ip) {
@@ -203,7 +203,7 @@ async function decodePacketProto(packet, ip) {
 	if (packetID == PACKET_UnionCmdNotify) {
 		var commands = [];
 		for (var i = 0; i < o.object.cmdList.length; i++) {
-			let {messageId, body} = o.object.cmdList[i];
+			let { messageId, body } = o.object.cmdList[i];
 			let protoName = MHYbuf.getProtoNameByPacketID(messageId);
 			let nested = await MHYbuf.dataToProtobuffer(body, messageId);
 			commands.push({
@@ -211,12 +211,12 @@ async function decodePacketProto(packet, ip) {
 				packetID: messageId,
 				object: nested
 			})
-			logPacket(packetSource, messageId, protoName, commands[commands.length-1], true, i == o.object.cmdList.length - 1);
+			logPacket(packetSource, messageId, protoName, commands[commands.length - 1], true, i == o.object.cmdList.length - 1);
 		}
 		o.object = {}
 		o.object.cmdList = commands;
 	}
-	if(o) o.source = packetSource;
+	if (o) o.source = packetSource;
 	return o;
 }
 
@@ -224,7 +224,7 @@ function joinBuffers(buffers, delimiter = ' ') {
 	let d = Buffer.from(delimiter);
 	return buffers.reduce((prev, b) => Buffer.concat([prev, d, b]));
 }
-function delay(t){return new Promise(resolve => setTimeout(resolve, t))};
+function delay(t) { return new Promise(resolve => setTimeout(resolve, t)) };
 
 function queuePacket(packet) {
 	packetQueue.push(packet);
@@ -235,7 +235,7 @@ function queuePacket(packet) {
 var proxyIP = '47.90.134.24';
 var proxyPort = 22101;
 async function execute() {
-	async function loop () {
+	async function loop() {
 		if (!packetQueueSize) return setImmediate(loop);
 		let decryptedDatagram;
 		let packetObject;
@@ -255,9 +255,9 @@ async function execute() {
 				// log.log(packet.crypt.slice(0,40).toString('hex'));
 				if (Session.datagrams) {
 					let datagram;
-					if(packet.ip.port === 22101 || packet.ip.port === 22102) {
+					if (packet.ip.port === 22101 || packet.ip.port === 22102) {
 						datagram = Buffer.concat([Buffer.from([0]), decryptedDatagram])
-					}else{
+					} else {
 						datagram = Buffer.concat([Buffer.from([1]), decryptedDatagram])
 					}
 					Session.datagrams.push(datagram);
@@ -280,7 +280,7 @@ async function execute() {
 }
 
 async function pcap(file) {
-	const { Readable } = require('stream');	
+	const { Readable } = require('stream');
 	const stream = Readable.from(Buffer.from(file, 'base64'));
 	var parser = pcapp.parse(stream);
 	parser.on('packet', packet => {
@@ -320,7 +320,7 @@ async function gcap(file) {
 		if (packet.readInt8(0) == 1) {
 			ip.port_dst = 22101
 			ip.port = null
-		}else{
+		} else {
 			ip.port = 22101
 			ip.port_dst = null
 		}
@@ -395,7 +395,7 @@ function getSessionStatus() {
 }
 
 async function updateProxyIP(ip, port) {
-	if(Session.proxy && proxyIP !== ip || Session.proxy && proxyPort !== port) {
+	if (Session.proxy && proxyIP !== ip || Session.proxy && proxyPort !== port) {
 		log.refresh('Relaunching proxy with an updated IP and port...')
 		await stopProxySession();
 		startProxySession(undefined, ip, port);
@@ -408,6 +408,6 @@ async function updateProxyIP(ip, port) {
 module.exports = {
 	execute,
 	pcap, gcap,
-	startProxySession, stopProxySession, getSessionStatus,updateProxyIP,
+	startProxySession, stopProxySession, getSessionStatus, updateProxyIP,
 	queuePacket
 }
