@@ -111,6 +111,5 @@ data/proto/
 
 # User data
 captures
-json_output
-output_packet_order
+output
 delete.bat

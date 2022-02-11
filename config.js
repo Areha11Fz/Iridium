@@ -1,11 +1,11 @@
 module.exports = {
 	ignoredProtos: [
 		// "QueryPathReq",
-		// "PingReq",
-		// "PingRsp",
+		"PingReq",
+		"PingRsp",
 		"UnionCmdNotify",
 		// "EvtAiSyncCombatThreatInfoNotify",
-		// "WorldPlayerRTTNotify",
+		"WorldPlayerRTTNotify",
 		// "QueryPathRsp",
 		// "EvtAiSyncSkillCdNotify",
 		// "SetEntityClientDataNotify",

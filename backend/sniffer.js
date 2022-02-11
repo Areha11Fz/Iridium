@@ -145,6 +145,27 @@ async function processMHYPacket(packet) {
 		}
 		packets.push(recv);
 
+		var protoName = MHYbuf.getProtoNameByPacketID(packetID)
+
+		var count = 0;
+		var isExist = true;
+		while (isExist) {
+			try {
+				isExist = fs.statSync("./output/bin/" + protoName + (count > 0 ? count : "") + ".bin");
+				count++;
+			} catch {
+				isExist = false;
+			}
+		}
+
+		if (!isExist) {
+			if (count == 0) {
+				fs.writeFileSync("./output/bin/" + protoName + ".bin", MHYbuf.parsePacketData(recv));
+			} else {
+				fs.writeFileSync("./output/bin/" + protoName + count + ".bin", MHYbuf.parsePacketData(recv));
+			}
+		}
+
 	} while (recv);
 	hrTime = process.hrtime();
 	kcpobj.update(hrTime[0] * 1000000 + hrTime[1] / 1000)
@@ -232,7 +253,7 @@ async function decodePacketProto(packet, ip) {
 	var isExist = true;
 	while (isExist) {
 		try {
-			isExist = fs.statSync("./json_output/" + protoName + (count > 0 ? count : "") + ".json");
+			isExist = fs.statSync("./output/json/" + protoName + (count > 0 ? count : "") + ".json");
 			count++;
 		} catch {
 			isExist = false;
@@ -241,14 +262,14 @@ async function decodePacketProto(packet, ip) {
 
 	if (!isExist) {
 		if (count == 0) {
-			fs.writeFileSync("./json_output/" + protoName + ".json", JSON.stringify(o.object));
+			fs.writeFileSync("./output/json/" + protoName + ".json", JSON.stringify(o.object));
 		} else {
-			fs.writeFileSync("./json_output/" + protoName + count + ".json", JSON.stringify(o.object));
+			fs.writeFileSync("./output/json/" + protoName + count + ".json", JSON.stringify(o.object));
 		}
 	}
 
 	orderCount++;
-	fs.appendFile("./output_packet_order/" + orderCount + "_" + protoName + "_" + packetID + "_" + packetSourceName + ".json", JSON.stringify(o.object), (err) => {
+	fs.appendFile("./output/packet_order/" + orderCount + "_" + protoName + "_" + packetID + "_" + packetSourceName + ".json", JSON.stringify(o.object), (err) => {
 		// console.log(err)
 	});
 
